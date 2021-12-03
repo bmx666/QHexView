@@ -153,7 +153,31 @@ QString QHexRenderer::hexString(quint64 line, QByteArray* rawline) const
     QByteArray lrawline = this->getLine(line);
     if(rawline) *rawline = lrawline;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
     return lrawline.toHex(' ').toUpper() + " ";
+#else
+    auto toHexLower = [=](uint value) -> char {
+        return "0123456789abcdef"[value & 0xF];
+    };
+
+    if (lrawline.size()) {
+        const char separator = ' ';
+        const int length = separator ? (lrawline.size() * 3 - 1) : (lrawline.size() * 2);
+        QByteArray hex(length, Qt::Uninitialized);
+        char *hexData = hex.data();
+        const uchar *data = (const uchar *)lrawline.data();
+
+        for (int i = 0, o = 0; i < lrawline.size(); ++i) {
+            hexData[o++] = toHexLower(data[i] >> 4);
+            hexData[o++] = toHexLower(data[i] & 0xf);
+
+            if ((separator) && (o < length))
+                hexData[o++] = separator;
+        }
+        return hex.toUpper() + " ";
+    } else
+        return " ";
+#endif
 }
 
 QString QHexRenderer::asciiString(quint64 line, QByteArray* rawline) const

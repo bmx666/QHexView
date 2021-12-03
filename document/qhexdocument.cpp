@@ -106,8 +106,33 @@ void QHexDocument::copy(bool hex)
     QClipboard* c = qApp->clipboard();
     QByteArray bytes = this->selectedBytes();
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
     if(hex)
         bytes = bytes.toHex(' ').toUpper();
+#else
+    auto toHexLower = [=](uint value) -> char {
+        return "0123456789abcdef"[value & 0xF];
+    };
+
+    if(hex) {
+        if (bytes.size()) {
+            const char separator = ' ';
+            const int length = separator ? (bytes.size() * 3 - 1) : (bytes.size() * 2);
+            QByteArray hex(length, Qt::Uninitialized);
+            char *hexData = hex.data();
+            const uchar *data = (const uchar *)bytes.data();
+
+            for (int i = 0, o = 0; i < bytes.size(); ++i) {
+                hexData[o++] = toHexLower(data[i] >> 4);
+                hexData[o++] = toHexLower(data[i] & 0xf);
+
+                if ((separator) && (o < length))
+                    hexData[o++] = separator;
+            }
+            bytes = hex.toUpper();
+        }
+    }
+#endif
 
     c->setText(bytes);
 }
